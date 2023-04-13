@@ -1,0 +1,19 @@
+node_modules
+.env
+coverage
+coverage.json
+typechain
+typechain-types
+NOTES.md
+store.json
+manifesto.json
+nftAbi.json
+govAbi.json
+
+#Hardhat files
+cache
+artifacts
+.openzeppelin
+
+#Remix
+/.deps
