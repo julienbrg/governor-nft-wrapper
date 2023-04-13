@@ -25,24 +25,37 @@ contract NFT is
 
     Counters.Counter private _tokenIdCounter;
 
+    address public original;
+    string public uri;
+
+    mapping(uint256 => bool) public claimed;
+
+    event Claimed(uint256 indexed tokenId);
+
     constructor(
-        address[] memory _firstMembers,
+        address _original,
+        string memory _name,
+        string memory _symbol,
         string memory _uri
-    ) ERC721("Membership NFT", "MEMBER") EIP712("Membership NFT", "1") {
-        for (uint i; i < _firstMembers.length; i++) {
-            safeMint(_firstMembers[i], _uri);
-        }
+    ) ERC721(_name, _symbol) EIP712(_name, "1") {
+        original = _original;
+        uri = _uri;
     }
 
-    /// @notice Adds a member
-    /// @dev Marked `onlyOwner`: only the Gov contract can access this function
+    /// @notice Allows holders of the original NFT can mint with the same ID
+    /// @dev Marked `claimed` after ownership verification
     /// @param to The address of the recipient
-    /// @param uri The `tokenURI` of the new member's NFT metadata (should be "ipfs://<CID>")
-    function safeMint(address to, string memory uri) public onlyOwner {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
+    /// @param tokenId The tokenId of the original NFT
+    function claim(address to, uint256 tokenId) public {
+        require(
+            ERC721(original).ownerOf(tokenId) == msg.sender,
+            "Caller does not own one of the original NFTs"
+        );
+        require(claimed[tokenId] == false, "Token ID already claimed");
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
+        claimed[tokenId] = true;
+        emit Claimed(tokenId);
     }
 
     function _beforeTokenTransfer(
@@ -69,25 +82,10 @@ contract NFT is
         super._burn(tokenId);
     }
 
-    /// @notice Bans a member
-    /// @dev Marked `onlyOwner`: only the Gov contract can access this function
-    /// @param tokenId The id of the NFT
-    function govBurn(uint256 tokenId) public onlyOwner {
-        _burn(tokenId);
-    }
-
     function tokenURI(
         uint256 tokenId
     ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
-    }
-
-    /// @notice Replaces the tokenId of a given NFT
-    /// @dev Marked `onlyOwner`: only the Gov contract can access this function
-    /// @param tokenId The id of the NFT
-    /// @param uri The new `tokenURI` for this ID (should be "ipfs://<CID>")
-    function setMetadata(uint256 tokenId, string memory uri) public onlyOwner {
-        _setTokenURI(tokenId, uri);
     }
 
     function supportsInterface(
